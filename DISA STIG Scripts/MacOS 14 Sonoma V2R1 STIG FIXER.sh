@@ -38,6 +38,15 @@ MAKE_TERMINAL_COLORFUL=true # Gives terminal color for the outputs * Requires HI
 ####################################################################################################
 
 # V-259438  limit SSHD to FIPS (May need to add more approved FIPS Algorithms)
+fips_sshd_config="Ciphers aes128-gcm@openssh.com
+HostbasedAcceptedAlgorithms ecdsa-sha2-nistp256,ecdsa-sha2-nistp256-cert-v01@openssh.com
+HostKeyAlgorithms ecdsa-sha2-nistp256,ecdsa-sha2-nistp256-cert-v01@openssh.com
+KexAlgorithms ecdh-sha2-nistp256
+MACs hmac-sha2-256
+PubkeyAcceptedAlgorithms ecdsa-sha2-nistp256,ecdsa-sha2-nistp256-cert-v01@openssh.com
+CASignatureAlgorithms ecdsa-sha2-nistp256"
+
+# V-259439  limit SSH to FIPS (May need to add more approved FIPS Algorithms)
 fips_ssh_config="Host *
 Ciphers aes128-gcm@openssh.com,aes256-ctr
 HostbasedAcceptedAlgorithms ecdsa-sha2-nistp256,ecdsa-sha2-nistp256-cert-v01@openssh.com
@@ -553,225 +562,246 @@ execute_and_log_manual() {
 ####################################################################################################
 
 complete_ssh_sshd_fix() {
-  rm -r /private/etc/ssh/*
-  ssh-keygen -A
-  mkdir -p /private/etc/ssh/sshd_config.d/
-  mkdir -p /private/etc/ssh/ssh_config.d/
+    rm -r /private/etc/ssh/*
+    ssh-keygen -A > /dev/null 2>&1
+    mkdir -p /private/etc/ssh/sshd_config.d/
+    mkdir -p /private/etc/ssh/ssh_config.d/
 
-  ssh_config="#	OpenBSD: ssh_config,v 1.36 2023/08/02 23:04:38 djm Exp $
+    ssh_config="#	OpenBSD: ssh_config,v 1.36 2023/08/02 23:04:38 djm Exp $
 
-  # This is the ssh client system-wide configuration file.  See
-  # ssh_config(5) for more information.  This file provides defaults for
-  # users, and the values can be changed in per-user configuration files
-  # or on the command line.
+    # This is the ssh client system-wide configuration file.  See
+    # ssh_config(5) for more information.  This file provides defaults for
+    # users, and the values can be changed in per-user configuration files
+    # or on the command line.
 
-  # Configuration data is parsed as follows:
-  #  1. command line options
-  #  2. user-specific file
-  #  3. system-wide file
-  # Any configuration value is only changed the first time it is set.
-  # Thus, host-specific definitions should be at the beginning of the
-  # configuration file, and defaults at the end.
+    # Configuration data is parsed as follows:
+    #  1. command line options
+    #  2. user-specific file
+    #  3. system-wide file
+    # Any configuration value is only changed the first time it is set.
+    # Thus, host-specific definitions should be at the beginning of the
+    # configuration file, and defaults at the end.
 
-  # This Include directive is not part of the default ssh_config shipped with
-  # OpenSSH. Options set in the included configuration files generally override
-  # those that follow.  The defaults only apply to options that have not been
-  # explicitly set.  Options that appear multiple times keep the first value set,
-  # unless they are a multivalue option such as IdentityFile.
-  Include /etc/ssh/ssh_config.d/*
+    # This Include directive is not part of the default ssh_config shipped with
+    # OpenSSH. Options set in the included configuration files generally override
+    # those that follow.  The defaults only apply to options that have not been
+    # explicitly set.  Options that appear multiple times keep the first value set,
+    # unless they are a multivalue option such as IdentityFile.
+    Include /etc/ssh/ssh_config.d/*
 
-  # Site-wide defaults for some commonly used options.  For a comprehensive
-  # list of available options, their meanings and defaults, please see the
-  # ssh_config(5) man page.
+    # Site-wide defaults for some commonly used options.  For a comprehensive
+    # list of available options, their meanings and defaults, please see the
+    # ssh_config(5) man page.
 
-  # Host *
-  #   ForwardAgent no
-  #   ForwardX11 no
-  #   PasswordAuthentication yes
-  #   HostbasedAuthentication no
-  #   GSSAPIAuthentication no
-  #   GSSAPIDelegateCredentials no
-  #   BatchMode no
-  #   CheckHostIP no
-  #   AddressFamily any
-  #   ConnectTimeout 0
-  #   StrictHostKeyChecking ask
-  #   IdentityFile ~/.ssh/id_rsa
-  #   IdentityFile ~/.ssh/id_dsa
-  #   IdentityFile ~/.ssh/id_ecdsa
-  #   IdentityFile ~/.ssh/id_ed25519
-  #   Port 22
-  #   Ciphers aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
-  #   MACs hmac-md5,hmac-sha1,umac-64@openssh.com
-  #   EscapeChar ~
-  #   Tunnel no
-  #   TunnelDevice any:any
-  #   PermitLocalCommand no
-  #   VisualHostKey no
-  #   ProxyCommand ssh -q -W %h:%p gateway.example.com
-  #   RekeyLimit 1G 1h
-  #   UserKnownHostsFile ~/.ssh/known_hosts.d/%k
-  Host *
-      SendEnv LANG LC_*
-  ServerAliveCountMax 0
-  ServerAliveInterval 900"
+    # Host *
+    #   ForwardAgent no
+    #   ForwardX11 no
+    #   PasswordAuthentication yes
+    #   HostbasedAuthentication no
+    #   GSSAPIAuthentication no
+    #   GSSAPIDelegateCredentials no
+    #   BatchMode no
+    #   CheckHostIP no
+    #   AddressFamily any
+    #   ConnectTimeout 0
+    #   StrictHostKeyChecking ask
+    #   IdentityFile ~/.ssh/id_rsa
+    #   IdentityFile ~/.ssh/id_dsa
+    #   IdentityFile ~/.ssh/id_ecdsa
+    #   IdentityFile ~/.ssh/id_ed25519
+    #   Port 22
+    #   Ciphers aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
+    #   MACs hmac-md5,hmac-sha1,umac-64@openssh.com
+    #   EscapeChar ~
+    #   Tunnel no
+    #   TunnelDevice any:any
+    #   PermitLocalCommand no
+    #   VisualHostKey no
+    #   ProxyCommand ssh -q -W %h:%p gateway.example.com
+    #   RekeyLimit 1G 1h
+    #   UserKnownHostsFile ~/.ssh/known_hosts.d/%k
+    Host *
+        SendEnv LANG LC_*
+    ServerAliveCountMax 0
+    ServerAliveInterval 900"
 
-  /bin/echo "${ssh_config}" > /private/etc/ssh/ssh_config
+    /bin/echo "${ssh_config}" > /private/etc/ssh/ssh_config
 
-  sshd_config="#	OpenBSD: sshd_config,v 1.104 2021/07/02 05:11:21 dtucker Exp $
+    sshd_config="#	OpenBSD: sshd_config,v 1.104 2021/07/02 05:11:21 dtucker Exp $
 
-  # This is the sshd server system-wide configuration file.  See
-  # sshd_config(5) for more information.
+    # This is the sshd server system-wide configuration file.  See
+    # sshd_config(5) for more information.
 
-  # This sshd was compiled with PATH=/usr/bin:/bin:/usr/sbin:/sbin
+    # This sshd was compiled with PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
-  # The strategy used for options in the default sshd_config shipped with
-  # OpenSSH is to specify options with their default value where
-  # possible, but leave them commented.  Uncommented options override the
-  # default value.
+    # The strategy used for options in the default sshd_config shipped with
+    # OpenSSH is to specify options with their default value where
+    # possible, but leave them commented.  Uncommented options override the
+    # default value.
 
-  # This Include directive is not part of the default sshd_config shipped with
-  # OpenSSH. Options set in the included configuration files generally override
-  # those that follow.  The defaults only apply to options that have not been
-  # explicitly set.  Options that appear multiple times keep the first value set,
-  # unless they are a multivalue option such as HostKey.
-  Include /etc/ssh/sshd_config.d/*
+    # This Include directive is not part of the default sshd_config shipped with
+    # OpenSSH. Options set in the included configuration files generally override
+    # those that follow.  The defaults only apply to options that have not been
+    # explicitly set.  Options that appear multiple times keep the first value set,
+    # unless they are a multivalue option such as HostKey.
+    Include /etc/ssh/sshd_config.d/*
 
-  #Port 22
-  #AddressFamily any
-  #ListenAddress 0.0.0.0
-  #ListenAddress ::
+    #Port 22
+    #AddressFamily any
+    #ListenAddress 0.0.0.0
+    #ListenAddress ::
 
-  #HostKey /etc/ssh/ssh_host_rsa_key
-  #HostKey /etc/ssh/ssh_host_ecdsa_key
-  #HostKey /etc/ssh/ssh_host_ed25519_key
+    #HostKey /etc/ssh/ssh_host_rsa_key
+    #HostKey /etc/ssh/ssh_host_ecdsa_key
+    #HostKey /etc/ssh/ssh_host_ed25519_key
 
-  # Ciphers and keying
-  #RekeyLimit default none
+    # Ciphers and keying
+    #RekeyLimit default none
 
-  # Logging
-  #SyslogFacility AUTH
-  #LogLevel INFO
+    # Logging
+    #SyslogFacility AUTH
+    #LogLevel INFO
 
-  # Authentication:
+    # Authentication:
 
-  #LoginGraceTime 2m
-  #PermitRootLogin prohibit-password
-  #StrictModes yes
-  #MaxAuthTries 6
-  #MaxSessions 10
+    #LoginGraceTime 2m
+    #PermitRootLogin prohibit-password
+    #StrictModes yes
+    #MaxAuthTries 6
+    #MaxSessions 10
 
-  #PubkeyAuthentication yes
+    #PubkeyAuthentication yes
 
-  # The default is to check both .ssh/authorized_keys and .ssh/authorized_keys2
-  # but this is overridden so installations will only check .ssh/authorized_keys
-  AuthorizedKeysFile	.ssh/authorized_keys
+    # The default is to check both .ssh/authorized_keys and .ssh/authorized_keys2
+    # but this is overridden so installations will only check .ssh/authorized_keys
+    AuthorizedKeysFile	.ssh/authorized_keys
 
-  #AuthorizedPrincipalsFile none
+    #AuthorizedPrincipalsFile none
 
-  #AuthorizedKeysCommand none
-  #AuthorizedKeysCommandUser nobody
+    #AuthorizedKeysCommand none
+    #AuthorizedKeysCommandUser nobody
 
-  # For this to work you will also need host keys in /etc/ssh/ssh_known_hosts
-  #HostbasedAuthentication no
-  # Change to yes if you don't trust ~/.ssh/known_hosts for
-  # HostbasedAuthentication
-  #IgnoreUserKnownHosts no
-  # Don't read the user's ~/.rhosts and ~/.shosts files
-  #IgnoreRhosts yes
+    # For this to work you will also need host keys in /etc/ssh/ssh_known_hosts
+    #HostbasedAuthentication no
+    # Change to yes if you don't trust ~/.ssh/known_hosts for
+    # HostbasedAuthentication
+    #IgnoreUserKnownHosts no
+    # Don't read the user's ~/.rhosts and ~/.shosts files
+    #IgnoreRhosts yes
 
-  # To disable tunneled clear text passwords, change to no here!
-  #PasswordAuthentication yes
-  #PermitEmptyPasswords no
+    # To disable tunneled clear text passwords, change to no here!
+    #PasswordAuthentication yes
+    #PermitEmptyPasswords no
 
-  # Change to no to disable s/key passwords
-  #KbdInteractiveAuthentication yes
+    # Change to no to disable s/key passwords
+    #KbdInteractiveAuthentication yes
 
-  # Kerberos options
-  #KerberosAuthentication no
-  #KerberosOrLocalPasswd yes
-  #KerberosTicketCleanup yes
-  #KerberosGetAFSToken no
+    # Kerberos options
+    #KerberosAuthentication no
+    #KerberosOrLocalPasswd yes
+    #KerberosTicketCleanup yes
+    #KerberosGetAFSToken no
 
-  # GSSAPI options
-  #GSSAPIAuthentication no
-  #GSSAPICleanupCredentials yes
+    # GSSAPI options
+    #GSSAPIAuthentication no
+    #GSSAPICleanupCredentials yes
 
-  # Set this to 'yes' to enable PAM authentication, account processing,
-  # and session processing. If this is enabled, PAM authentication will
-  # be allowed through the KbdInteractiveAuthentication and
-  # PasswordAuthentication.  Depending on your PAM configuration,
-  # PAM authentication via KbdInteractiveAuthentication may bypass
-  # the setting of PermitRootLogin prohibit-password.
-  # If you just want the PAM account and session checks to run without
-  # PAM authentication, then enable this but set PasswordAuthentication
-  # and KbdInteractiveAuthentication to 'no'.
-  #UsePAM no
+    # Set this to 'yes' to enable PAM authentication, account processing,
+    # and session processing. If this is enabled, PAM authentication will
+    # be allowed through the KbdInteractiveAuthentication and
+    # PasswordAuthentication.  Depending on your PAM configuration,
+    # PAM authentication via KbdInteractiveAuthentication may bypass
+    # the setting of PermitRootLogin prohibit-password.
+    # If you just want the PAM account and session checks to run without
+    # PAM authentication, then enable this but set PasswordAuthentication
+    # and KbdInteractiveAuthentication to 'no'.
+    #UsePAM no
 
-  #AllowAgentForwarding yes
-  #AllowTcpForwarding yes
-  #GatewayPorts no
-  #X11Forwarding no
-  #X11DisplayOffset 10
-  #X11UseLocalhost yes
-  #PermitTTY yes
-  #PrintMotd yes
-  #PrintLastLog yes
-  #TCPKeepAlive yes
-  #PermitUserEnvironment no
-  #Compression delayed
-  #ClientAliveInterval 0
-  #ClientAliveCountMax 3
-  #UseDNS no
-  #PidFile /var/run/sshd.pid
-  #MaxStartups 10:30:100
-  #PermitTunnel no
-  #ChrootDirectory none
-  #VersionAddendum none
+    #AllowAgentForwarding yes
+    #AllowTcpForwarding yes
+    #GatewayPorts no
+    #X11Forwarding no
+    #X11DisplayOffset 10
+    #X11UseLocalhost yes
+    #PermitTTY yes
+    #PrintMotd yes
+    #PrintLastLog yes
+    #TCPKeepAlive yes
+    #PermitUserEnvironment no
+    #Compression delayed
+    #ClientAliveInterval 0
+    #ClientAliveCountMax 3
+    #UseDNS no
+    #PidFile /var/run/sshd.pid
+    #MaxStartups 10:30:100
+    #PermitTunnel no
+    #ChrootDirectory none
+    #VersionAddendum none
 
-  # no default banner path
-  Banner /etc/banner
+    # no default banner path
+    Banner /etc/banner
 
-  # override default of no subsystems
-  #Subsystem	sftp	/usr/libexec/sftp-server
+    # override default of no subsystems
+    #Subsystem	sftp	/usr/libexec/sftp-server
 
-  # Example of overriding settings on a per-user basis
-  #Match User anoncvs
-  #	X11Forwarding no
-  #	AllowTcpForwarding no
-  #	PermitTTY no
-  #	ForceCommand cvs server"
-  /bin/echo "${sshd_config}" > /private/etc/ssh/sshd_config
+    # Example of overriding settings on a per-user basis
+    #Match User anoncvs
+    #	X11Forwarding no
+    #	AllowTcpForwarding no
+    #	PermitTTY no
+    #	ForceCommand cvs server"
+    /bin/echo "${sshd_config}" > /private/etc/ssh/sshd_config
 
-  macos="# Options set by macOS that differ from the OpenSSH defaults.
-  UsePAM yes
-  AcceptEnv LANG LC_*
-  Subsystem	sftp	/usr/libexec/sftp-server"
-  /bin/echo "${macos}" > /private/etc/ssh/sshd_config.d/100-macos.conf
+    macos="# Options set by macOS that differ from the OpenSSH defaults.
+    UsePAM yes
+    AcceptEnv LANG LC_*
+    Subsystem	sftp	/usr/libexec/sftp-server"
+    /bin/echo "${macos}" > /private/etc/ssh/sshd_config.d/100-macos.conf
 
-  /bin/echo "${fips_ssh_config}" > /etc/ssh/ssh_config.d/fips_ssh_config
+    /bin/echo "${fips_ssh_config}" > /etc/ssh/ssh_config.d/fips_ssh_config
 
-  include_dir=$(/usr/bin/awk '/^Include/ {print $2}' /etc/ssh/sshd_config | /usr/bin/tr -d '*')
+    include_dir=$(/usr/bin/awk '/^Include/ {print $2}' /etc/ssh/sshd_config | /usr/bin/tr -d '*')
 
-  if [[ -z $include_dir ]]; then
+    if [[ -z $include_dir ]]; then
     /usr/bin/sed -i.bk "1s/.*/Include \/etc\/ssh\/sshd_config.d\/\*/" /etc/ssh/sshd_config
-  fi
-
-  fips_sshd_config=("Ciphers aes128-gcm@openssh.com,aes256-ctr" "HostbasedAcceptedAlgorithms ecdsa-sha2-nistp256,ecdsa-sha2-nistp256-cert-v01@openssh.com,rsa-sha2-512,rsa-sha2-256,ssh-rsa" "HostKeyAlgorithms ecdsa-sha2-nistp256,ecdsa-sha2-nistp256-cert-v01@openssh.com,rsa-sha2-512,rsa-sha2-256,ssh-rsa" "KexAlgorithms ecdh-sha2-nistp256" "MACs hmac-sha2-256" "PubkeyAcceptedAlgorithms ecdsa-sha2-nistp256,ecdsa-sha2-nistp256-cert-v01@openssh.com" "CASignatureAlgorithms ecdsa-sha2-nistp256")
-
-  for config in "${fips_sshd_config[@]}"; do
-    /usr/bin/grep -qxF "$config" "${include_dir}01-mscp-sshd.conf" 2>/dev/null || echo "$config" >> "${include_dir}01-mscp-sshd.conf"
-  done
-
-  for file in $(ls ${include_dir}); do
-    if [[ "$file" == "100-macos.conf" ]]; then
-        continue
     fi
-    if [[ "$file" == "01-mscp-sshd.conf" ]]; then
-        break
-    fi
-    /bin/mv "${include_dir}${file}" "${include_dir}20-${file}"
-  done
+
+    mscp_sshd="passwordauthentication no
+    kbdinteractiveauthentication no
+    banner /etc/banner
+    channeltimeout session:*=900
+    clientalivecountmax 1
+    clientaliveinterval 900
+    logingracetime 30
+    permitrootlogin no
+    unusedconnectiontimeout 900"
+
+    combine_mscp_sshd_fips_sshd_config="${mscp_sshd}
+    ${fips_sshd_config}"
+
+    /bin/echo "${combine_mscp_sshd_fips_sshd_config}" > /etc/ssh/sshd_config.d/01-mscp-sshd.conf
+    /bin/echo "${fips_sshd_config}" > /etc/ssh/sshd_config.d/fips_sshd_config
+
+    # Directory to process
+    include_dir="/private/etc/ssh/sshd_config.d/"
+
+    # Ensure the directory ends with a slash
+    include_dir="${include_dir%/}/"
+
+    # Use find to list only non-hidden files
+    find "$include_dir" -maxdepth 1 -type f ! -name '.*' | while read -r file; do
+        # Extract the base name of the file
+        filename=$(basename "$file")
+
+        if [[ "$filename" == "100-macos.conf" ]]; then
+            continue
+        fi
+        if [[ "$filename" == "01-mscp-sshd.conf" ]]; then
+            break
+        fi
+
+        /bin/mv "$file" "${include_dir}20-${filename}"
+    done
 }
 ####################################################################################################
 #
@@ -1766,7 +1796,7 @@ expected_result="1"
 fix_command="/usr/sbin/systemsetup -setremoteappleevents off && /bin/launchctl disable system/com.apple.AEServer"
 requires_mdm="false"
 
-execute_and_log "$check_name" "$command" "$expected_result" "$simple_name" "$fix_command" "$requires_mdm"
+execute_and_log_manual "$check_name" "$command" "$expected_result" "$simple_name" "$fix_command" "$requires_mdm"
 
 ##############################################
 check_name="V-259496"
@@ -2592,18 +2622,20 @@ execute_and_log "$check_name" "$command" "$expected_result" "$simple_name" "$fix
 ##############################################
 check_name="V-259562"
 simple_name="Must_Enable_Firewall"
-command="dontAllowDisable=\$(/usr/bin/osascript -l JavaScript << EOS
-\$.NSUserDefaults.alloc.initWithSuiteName('com.apple.MCX')\
-.objectForKey('dontAllowFDEDisable').js
+command="profile=\"\$(/usr/bin/osascript -l JavaScript << EOS
+\$.NSUserDefaults.alloc.initWithSuiteName('com.apple.security.firewall')\
+.objectForKey('EnableFirewall').js
 EOS
-)
-fileVault=\$(/usr/bin/fdesetup status | /usr/bin/grep -c \"FileVault is On.\")
-if [[ \"\$dontAllowDisable\" == \"true\" ]] && [[ \"\$fileVault\" == 1 ]]; then
-  echo \"1\"
+)\"
+
+plist=\"\$(/usr/bin/defaults read /Library/Preferences/com.apple.alf globalstate 2>/dev/null)\"
+
+if [[ \"\$profile\" == \"true\" ]] && [[ \"\$plist\" =~ [1,2] ]]; then
+  echo \"true\"
 else
-  echo \"0\"
+  echo \"false\"
 fi"
-expected_result="1"
+expected_result="true"
 fix_command="/usr/bin/defaults write /Library/Preferences/com.apple.alf globalstate -int 1"
 requires_mdm="false"
 

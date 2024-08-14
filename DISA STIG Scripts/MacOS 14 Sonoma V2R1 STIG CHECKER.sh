@@ -2140,18 +2140,20 @@ execute_and_log "$check_name" "$command" "$expected_result" "$simple_name"
 ##############################################
 check_name="V-259562"
 simple_name="Must_Enable_Firewall"
-command="dontAllowDisable=\$(/usr/bin/osascript -l JavaScript << EOS
-\$.NSUserDefaults.alloc.initWithSuiteName('com.apple.MCX')\
-.objectForKey('dontAllowFDEDisable').js
+command="profile=\"\$(/usr/bin/osascript -l JavaScript << EOS
+\$.NSUserDefaults.alloc.initWithSuiteName('com.apple.security.firewall')\
+.objectForKey('EnableFirewall').js
 EOS
-)
-fileVault=\$(/usr/bin/fdesetup status | /usr/bin/grep -c \"FileVault is On.\")
-if [[ \"\$dontAllowDisable\" == \"true\" ]] && [[ \"\$fileVault\" == 1 ]]; then
-  echo \"1\"
+)\"
+
+plist=\"\$(/usr/bin/defaults read /Library/Preferences/com.apple.alf globalstate 2>/dev/null)\"
+
+if [[ \"\$profile\" == \"true\" ]] && [[ \"\$plist\" =~ [1,2] ]]; then
+  echo \"true\"
 else
-  echo \"0\"
+  echo \"false\"
 fi"
-expected_result="1"
+expected_result="true"
 
 execute_and_log "$check_name" "$command" "$expected_result" "$simple_name"
 
