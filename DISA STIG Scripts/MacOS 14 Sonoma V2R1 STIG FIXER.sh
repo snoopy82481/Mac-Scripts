@@ -2637,7 +2637,7 @@ else
 fi"
 expected_result="true"
 fix_command="/usr/bin/defaults write /Library/Preferences/com.apple.alf globalstate -int 1"
-requires_mdm="false"
+requires_mdm="true" #check command looks for configuration profile
 
 execute_and_log "$check_name" "$command" "$expected_result" "$simple_name" "$fix_command" "$requires_mdm"
 
