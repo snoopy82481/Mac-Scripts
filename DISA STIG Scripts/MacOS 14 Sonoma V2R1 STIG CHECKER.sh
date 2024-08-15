@@ -23,7 +23,11 @@
 #  1.6 8/12/24 - fixed check for V-259530 & fixed execute_anyresult_and_log terminal logging
 #  1.7 8/13/24 - condensed add header functions
 #  2.0 8/13/24 - Added user path logging, added support for CSV, and added more hide
-#
+#  2.1 8/15/24 - Created initialize_logging function and condensed all initial logging logic into it
+#                Created main funtion and moved most non-function commands from around the script
+#                Stylized the settings dialog to be more concise and readable
+#                Moved variable's around to better group what is being declared
+#                Moved checking for CSV Header from write_to_csv to initialize_logging
 ####################################################################################################
 # Script Supported STIG Version
 STIG_VERSION="MACOS 14 (SONOMA) V2R1" # [ Do Not Adjust ]
@@ -739,7 +743,6 @@ main() {
         echo__light_green "==========================================================="
         echo ""
 
-        read -p "Press any key"
     fi
 
     ####################################################################################################
