@@ -16,18 +16,31 @@
 #
 #  1.0 8/05/24 - Original (Learned from https://github.com/usnistgov/macos_security?tab=readme-ov-file)
 #  1.1 8/09/24 - Adjusted logging in terminal and file
+#  2.0 8/14/24 - Added multiple logging outputs and fixed some code
 #
 ####################################################################################################
 # Script Supported STIG Version
 STIG_VERSION="MACOS 14 (SONOMA) V2R1" # [ Do Not Adjust ]
 
-# Script Log Location [ /var/log/yourcompany_Passed_STIG_Scan.log ]
-COMMAND_LOG_FILE="/var/log/fix_Command_STIG.log"
-LOG_COMMANDS=true # Shows the commands input and output in a log file, * Passed checks dont have input/output * [ true (default) | false ]
-ONLY_SHOW_FAILED=true # Hides passed checks [ true (default) | false ]
+# Script Log Names [ /var/log/Command_STIG_Fix.log ]
+MANUAL_LOG_FILE_NAME="Manually_Check_STIG_Scan_Fix.log"
+FAILURE_LOG_FILE_NAME="Failed_STIG_Scan_Fix.log"
+COMBINED_LOG_FILE_NAME="Combined_STIG_Scan_Fix.log"
+COMMAND_LOG_FILE_NAME="Command_STIG_Fix.log"
+
+# Logging Options
+CLEAR_LOGS=true # Clears existing local logs before running [ true (default) | false ] )
+LOG_PATH="" # Change default path [ if left blank the default path is /var/log/ ]
+LOG_TO_SINGLE_FILE=false # Logs failures & passes in one log file [ true | false (default) ]
+LOG_COMMANDS=true # Shows the commands input and output in a log file, *PERFECT FOR FILLING OUT STIG CHECKS* [ true (default) | false ]
+LOG_RESULTS_TO_USER_LOG_FOLDER=true # Logs results to the users log folder [ true (default) | false ]
+ONLY_SHOW_FAILED_COMMANDS=true # shows only failed checks in the command log [ true (default) | false ]
+
+# CSV Options
+LOG_TO_CSV=true # logs failures & passes to a csv file [ true  | false (default) ]
+CSV_LOG_FILE="/var/log/STIG_csv_logs_Fix.csv" # Default [ /var/log/STIG_csv_logs.csv ]
 
 # Default values for logs
-CLEAR_LOGS=true # Clears existing local logs before running [ true (default) | false ] )
 HIDE_RESULTS_IN_TERMINAL=false # Show output in terminal when running script local [ true (default) | false ]
 MAKE_TERMINAL_COLORFUL=true # Gives terminal color for the outputs * Requires HIDE_RESULTS_IN_TERMINAL=false * [ true (default) | false ]
 
@@ -77,6 +90,25 @@ fi
 
 # Pulls Current User
 CURRENT_USER=$( /usr/sbin/scutil <<< "show State:/Users/ConsoleUser" | /usr/bin/awk '/Name :/ && ! /loginwindow/ { print $3 }' )
+
+# Construct the path to the current user's Logs folder
+USER_LOG_FILE="/Users/$CURRENT_USER/Library/Logs/"
+
+if [ -z "$LOG_PATH" ]; then
+    LOG_PATH="/var/log/"
+fi
+# Admin Log Locations
+MANUAL_LOG_FILE="$LOG_PATH$MANUAL_LOG_FILE_NAME"
+FAILURE_LOG_FILE="$LOG_PATH$FAILURE_LOG_FILE_NAME"
+COMBINED_LOG_FILE="$LOG_PATH$COMBINED_LOG_FILE_NAME"
+COMMAND_LOG_FILE="$LOG_PATH$COMMAND_LOG_FILE_NAME"
+
+# User Log Locations
+# Construct the path to the current user's Logs folder
+USER_MANUAL_LOG_FILE="$USER_LOG_FILE$MANUAL_LOG_FILE_NAME"
+USER_FAILURE_LOG_FILE="$USER_LOG_FILE$FAILURE_LOG_FILE_NAME"
+USER_SINGLE_LOG_FILE="$USER_LOG_FILE$SINGLE_LOG_FILE_NAME"
+USER_COMMAND_LOG_FILE="$USER_LOG_FILE$COMMAND_LOG_FILE_NAME"
 
 ####################################################################################################
 #
@@ -307,12 +339,26 @@ if [ "$HIDE_RESULTS_IN_TERMINAL" = false ]; then
     echo__light_green "= = = = = = = = = = = = = = = = = = = = = = = = = = = = = ="
     echo__light_green "==========================================================="
     echo_set_variables "STIG Version:" "$STIG_VERSION"
-    echo_set_variables "Command log file:" "$COMMAND_LOG_FILE"
-    echo_set_variables "Only show failed checks:" "$ONLY_SHOW_FAILED"
+    echo_white "Script written by https://github.com/cocopuff2u"
     echo ""
-    echo_set_variables "Clear logs:" "$CLEAR_LOGS"
-    echo_set_variables "Hide results in terminal:" "$HIDE_RESULTS_IN_TERMINAL"
-    echo_rainbow_text "Make terminal colorful: ($MAKE_TERMINAL_COLORFUL)"
+    echo_set_variables "Passed Log File Path" "$MANUAL_LOG_FILE"
+    echo_set_variables "Failed Log File Path" "$FAILURE_LOG_FILE"
+    echo_set_variables "Consolidate Log File Path" "$COMBINED_LOG_FILE"
+    echo_set_variables "Command Log File Path" "$COMMAND_LOG_FILE"
+    echo ""
+    echo_set_variables "Clear Existing Logs" "$CLEAR_LOGS"
+    echo_set_variables "Consolidate Logs" "$LOG_TO_SINGLE_FILE"
+    echo_set_variables "Log Command Output/Input" "$LOG_COMMANDS"
+    echo_set_variables "Only Show Failed Commands" "$ONLY_SHOW_FAILED_COMMANDS"
+    echo ""
+    echo_set_variables "Log Results to Users Log Folder" "$LOG_RESULTS_TO_USER_LOG_FOLDER"
+    echo_set_variables "Users Log Folder" "$USER_LOG_FILE"
+    echo ""
+    echo_set_variables "Log Results to CSV" "$LOG_TO_CSV"
+    echo_set_variables "CSV Log File Path" "$CSV_LOG_FILE"
+    echo ""
+    echo_set_variables "Hide Results in Ierminal" "$HIDE_RESULTS_IN_TERMINAL"
+    echo_rainbow_text "Enable Terminal Colorization ($MAKE_TERMINAL_COLORFUL)"
     echo__light_green "==========================================================="
 fi
 
@@ -324,31 +370,71 @@ fi
 
 # Clear log files if flag is set
 if [ "$CLEAR_LOGS" = true ]; then
-  : > "$COMMAND_LOG_FILE"
-  echo ""
-  echo_white_bold "Cleared existing log before starting:"
-  echo_gray "$COMMAND_LOG_FILE"
-  echo ""
-  echo__light_green "==========================================================="
+    if [ "$LOG_TO_SINGLE_FILE" = true ]; then
+        : > "$SINGLE_LOG_FILE"
+        : > "$USER_SINGLE_LOG_FILE"
+        : > "$CSV_LOG_FILE"
+        echo ""
+        echo_white_bold "Cleared existing log before starting:"
+        echo_gray "$SINGLE_LOG_FILE and $USER_SINGLE_LOG_FILE"
+        echo ""
+        echo__light_green "==========================================================="
+    else
+        : > "$MANUAL_LOG_FILE"
+        : > "$FAILURE_LOG_FILE"
+        : > "$COMMAND_LOG_FILE"
+        : > "$CSV_LOG_FILE"
+        : > "$USER_MANUAL_LOG_FILE"
+        : > "$USER_FAILURE_LOG_FILE"
+        : > "$USER_COMMAND_LOG_FILE"
+        if [ "$HIDE_RESULTS_IN_TERMINAL" = false ]; then
+        echo ""
+        echo_white_bold "Cleared existing logs before starting:"
+        echo_gray "$CSV_LOG_FILE"
+        echo_gray "$MANUAL_LOG_FILE , $FAILURE_LOG_FILE , and $COMMAND_LOG_FILE"
+        echo_gray "$USER_MANUAL_LOG_FILE , $USER_FAILURE_LOG_FILE , and $USER_COMMAND_LOG_FILE"
+        echo ""
+        echo__light_green "==========================================================="
+        fi
+    fi
 fi
 
 # Function to add date header to log files
 
-add_date_header_commands() {
-    local log_file=$1
+# Function to add date header to log files
+add_date_header() {
+  local log_file=$1
+  local checks=$2
+
     echo "===========================================================" >> "$log_file"
     echo "= = = = = = = = = = = = = = = = = = = = = = = = = = = = = =" >> "$log_file"
     echo "$STIG_VERSION" >> "$log_file"
-    echo "STIG COMMAND OUTPUT LOGS" >> "$log_file"
+    echo "$checks" >> "$log_file"
     echo "Log Date: $(date +'%Y-%m-%d %I:%M:%S %p')" >> "$log_file"
     echo "= = = = = = = = = = = = = = = = = = = = = = = = = = = = = =" >> "$log_file"
     echo "===========================================================" >> "$log_file"
     echo "" >> "$log_file"
 }
 
-# Add date header to command logs
-if [ "$LOG_COMMANDS" = true ]; then
-    add_date_header_commands "$COMMAND_LOG_FILE"
+# Add date header to logs single or combined
+if [ "$LOG_TO_SINGLE_FILE" = false ]; then
+    add_date_header "$MANUAL_LOG_FILE" "MANUAL STIG FIX FAILURES"
+    add_date_header "$FAILURE_LOG_FILE" "FAILED STIG FIX FAILURES"
+    add_date_header "$USER_MANUAL_LOG_FILE" "MANUAL STIG FIX FAILURES"
+    add_date_header "$USER_FAILURE_LOG_FILE" "FAILED STIG FIX FAILURES"
+    # Add date header to command logs
+    if [ "$LOG_COMMANDS" = true ]; then
+        add_date_header "$COMMAND_LOG_FILE" "STIG FIX COMMAND OUTPUT LOGS"
+        add_date_header "$USER_COMMAND_LOG_FILE" "STIG FIX COMMAND OUTPUT LOGS"
+    fi
+else
+    add_date_header "$SINGLE_LOG_FILE" "COMBINED STIG FIX FAILURES"
+    add_date_header "$USER_SINGLE_LOG_FILE" "COMBINED STIG FIX FAILURES"
+    # Add date header to command logs
+    if [ "$LOG_COMMANDS" = true ]; then
+        add_date_header "$COMMAND_LOG_FILE" "STIG FIX COMMAND OUTPUT LOGS"
+        add_date_header "$USER_COMMAND_LOG_FILE" "STIG FIX COMMAND OUTPUT LOGS"
+    fi
 fi
 
 log_command_output_failed() {
@@ -424,6 +510,78 @@ log_command_output_manual() {
         echo "Fix requires manual review or correction based on setup" >> "$COMMAND_LOG_FILE"
 }
 
+# Function to log results to the appropriate file
+log_result() {
+    local check_name=$1
+    local simple_name=$2
+    local $result=$3
+    local $requires_mdm=$4
+
+    if [ "$LOG_TO_CSV" = true ]; then
+    write_to_csv "$check_name" "$result" "$simple_name" "$requires_mdm"
+    fi
+
+    if [ "$LOG_TO_SINGLE_FILE" = true ]; then
+        log_file="$COMBINED_LOG_FILE"
+        User_log_file="$USER_SINGLE_LOG_FILE"
+    else
+        if [ "$result" = "Failed" ]; then
+            log_file="$FAILURE_LOG_FILE"
+            User_log_file="$USER_FAILURE_LOG_FILE"
+            else
+            log_file="$MANUAL_LOG_FILE"
+            User_log_file="$USER_MANUAL_LOG_FILE"
+        fi
+    fi
+
+    # Append the log message to the appropriate file with a timestamp
+    echo "$check_name ($simple_name): $result" >> "$log_file"
+
+    if [ "$LOG_RESULTS_TO_USER_LOG_FOLDER" = true ]; then
+      echo "$check_name ($simple_name): $result" >> "$User_log_file"
+      fi
+
+    if [ "$HIDE_RESULTS_IN_TERMINAL" = false ]; then
+      if [ "$HIDE_LOGGING_LOCATION_IN_TERMINAL" = false ]; then
+        echo_gray "Logged result output to $log_file"
+        if [ "$LOG_RESULTS_TO_USER_LOG_FOLDER" = true ]; then
+        echo_gray "Logged result output to $User_log_file"
+        fi
+      fi
+    fi
+}
+
+# Function to log results to CSV
+write_to_csv() {
+    local check_name="$1"
+    local result="$2"
+    local simple_name="$3"
+    local requires_mdm="$4"
+
+    # Define the header
+    HEADER="Check Name,Simple Name,Result,Requires MDM"
+
+    # Check if the file exists and if it contains the header
+    if [ ! -f "$CSV_LOG_FILE" ]; then
+        # File does not exist; write the header
+        echo "$HEADER" > "$CSV_LOG_FILE"
+    elif ! grep -q "^$HEADER$" "$CSV_LOG_FILE"; then
+        # File exists but does not contain the header; add the header
+        echo "$HEADER" >> "$CSV_LOG_FILE"
+    fi
+
+    # Preserve newlines and special characters by quoting the fields
+    local pass_fail
+    if [ "$command_output" = "$expected_result" ]; then
+        pass_fail="Passed"
+    else
+        pass_fail="Failed"
+    fi
+
+    # Append the data row to the CSV file
+    echo "$check_name,$simple_name,$result,$requires_mdm" >> "$CSV_LOG_FILE"
+}
+
 ####################################################################################################
 #
 # Execute and Trigger Log Commands Below
@@ -455,7 +613,7 @@ execute_and_log() {
         if [ "$HIDE_RESULTS_IN_TERMINAL" = false ]; then
           echo_result "$result"
         fi
-        if [ "$ONLY_SHOW_FAILED" = false ]; then
+        if [ "$ONLY_SHOW_FAILED_COMMANDS" = false ]; then
         log_command_output_passed "$check_name" "$simple_name"
         fi
     else
@@ -471,6 +629,7 @@ execute_and_log() {
         else
           echo_failed_mdm "MDM configuration profile"
         fi
+        log_result "$check_name" "$simple_name" "$result" "$requires_mdm"
         log_command_output_failed "$check_name" "$command" "$expected_result" "$simple_name" "$fix_command" "$requires_mdm" "$command_output" "$command_fix_output"
     fi
 
@@ -499,7 +658,7 @@ execute_anyresult_and_log() {
         if [ "$HIDE_RESULTS_IN_TERMINAL" = false ]; then
           echo_result "$result"
         fi
-        if [ "$ONLY_SHOW_FAILED" = false ]; then
+        if [ "$ONLY_SHOW_FAILED_COMMANDS" = false ]; then
         log_command_output_passed "$check_name" "$simple_name"
         fi
     else
@@ -515,6 +674,7 @@ execute_anyresult_and_log() {
         else
           echo_failed_mdm "MDM configuration profile"
         fi
+        log_result "$check_name" "$simple_name" "$result" "$requires_mdm"
         log_command_output_failed "$check_name" "$command" "$expected_result" "$simple_name" "$fix_command" "$requires_mdm" "$command_output" "$command_fix_output"
     fi
 }
@@ -542,15 +702,16 @@ execute_and_log_manual() {
       if [ "$HIDE_RESULTS_IN_TERMINAL" = false ]; then
         echo_result "$result"
       fi
-      if [ "$ONLY_SHOW_FAILED" = false ]; then
+      if [ "$ONLY_SHOW_FAILED_COMMANDS" = false ]; then
       log_command_output_passed "$check_name" "$simple_name"
       fi
   else
-      result="Failed (Manual)"
+      result="Failed Manually Check"
       if [ "$HIDE_RESULTS_IN_TERMINAL" = false ]; then
       echo_result "$result"
         echo_manual "Manual review or correction based on setup"
       fi
+      log_result "$check_name" "$simple_name" "$result" "$requires_mdm"
       log_command_output_manual "$check_name" "$command" "$expected_result" "$simple_name" "$fix_command" "$requires_mdm" "$command_output" "$command_fix_output"
   fi
 }
